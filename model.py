@@ -2,33 +2,30 @@ import numpy as np
 import tensorflow as tf
 
 
-def normalize(spectrogram, max_value=10000) -> np.array:
-    spectrogram = np.clip(spectrogram, 0, max_value)
-    spectrogram = spectrogram / max_value
+def normalize(spectrogram, max=10000) -> np.array:
+    spectrogram = np.clip(spectrogram, 0, max)
+    spectrogram = spectrogram / max
     return spectrogram
 
 
-def adjust(spectrogram, target_shape=(1998, 101)) -> np.array:
-    height, width = target_shape
-    current_height, current_width = spectrogram.shape
-
-    if current_height < height:
-        pad_top = (height - current_height) // 2
-        pad_bottom = height - current_height - pad_top
-        spectrogram = np.pad(spectrogram, ((pad_top, pad_bottom), (0, 0)), mode='edge')
-    elif current_height > height:
-        crop_top = (current_height - height) // 2
-        crop_bottom = current_height - height - crop_top
-        spectrogram = spectrogram[crop_top:current_height - crop_bottom, :]
-
-    if current_width < width:
-        pad_left = (width - current_width) // 2
-        pad_right = width - current_width - pad_left
-        spectrogram = np.pad(spectrogram, ((0, 0), (pad_left, pad_right)), mode='edge')
-    elif current_width > width:
-        crop_left = (current_width - width) // 2
-        crop_right = current_width - width - crop_left
-        spectrogram = spectrogram[:, crop_left:current_width - crop_right]
+def adjust(spectrogram, x=1998, y=101) -> np.array:
+    current_x, current_y = spectrogram.shape
+    if current_x < x:
+        top = (x - current_x) // 2
+        bottom = x - current_x - top
+        spectrogram = np.pad(spectrogram, ((top, bottom), (0, 0)), mode='edge')
+    elif current_x > x:
+        top = (current_x - x) // 2
+        bottom = current_x - x - top
+        spectrogram = spectrogram[top:current_x - bottom, :]
+    if current_y < y:
+        left = (y - current_y) // 2
+        right = y - current_y - left
+        spectrogram = np.pad(spectrogram, ((0, 0), (left, right)), mode='edge')
+    elif current_y > y:
+        left = (current_y - y) // 2
+        right = current_y - y - left
+        spectrogram = spectrogram[:, left:current_y - right]
 
     return spectrogram
 
@@ -37,6 +34,21 @@ def make_prediction(spectrogram):
     spectrogram = adjust(spectrogram)
     spectrogram = normalize(spectrogram)
     spectrogram = tf.reshape(spectrogram, (1, 1998, 101))
-    model = tf.keras.models.load_model("AudioSpectrogram.h5")
+    model = tf.keras.models.load_model(R"AudioSpectrogram-3.h5")
     prediction = model.predict(spectrogram)
-    return prediction
+
+    tmp = np.argmax(prediction[0])
+    if tmp == 1:
+        return 1
+    return 0
+
+
+real_data = np.load('dataset/real.npz')
+fake_data = np.load('dataset/fake.npz')
+
+pre = make_prediction(np.array(real_data['x'][3]))
+pre1 = make_prediction(np.array(fake_data['x'][3]))
+
+
+print(pre)
+print(pre1)
